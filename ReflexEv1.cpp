@@ -122,10 +122,10 @@ int main(){
     for (int k = 0; k < n; ++k) {
     int i = idx[k]; 
     cout << meses[i] << " " 
-         << dias[i] << " " 
-         << horas[i] << " "
-         << ips[i] << ":" << puertos[i] << " "
-         << razones[i] << "\n";
+        << dias[i] << " " 
+        << horas[i] << " "
+        << ips[i] << ":" << puertos[i] << " "
+        << razones[i] << "\n";
 }
     return 0;
 }
