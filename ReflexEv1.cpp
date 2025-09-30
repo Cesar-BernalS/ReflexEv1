@@ -1,7 +1,6 @@
-/* César Tadeo Bernal Sauceda
-Regina Aguilar García
-María Fernanda García Bushbeck
-*/
+// Autores: César Tadeo Bernal Sauceda, Regina Aguilar García, María Fernanda García Bushbeck
+// Fecha: 29/09/2025
+// Descripción: Programa que lee una bitácora, ordena los registros por fecha y permite buscar registros en un rango de fechas usando búsquedas binarias
 
 #include <iostream>
 #include <fstream>
@@ -11,12 +10,15 @@ using namespace std;
 
 const int MAX = 20000;
 
-// Arreglos globales
+// Arreglos globales para almacenar los datos de la bitácora
 string meses[MAX], horas[MAX], ips[MAX], puertos[MAX], razones[MAX];
 int dias[MAX];
 int mesInt[MAX], horasInt[MAX]; 
 
-// Convertir datos a enteros
+// Convierte el nombre del mes a su equivalente entero (Jan=1, Dec=12)
+// Parámetro: mes - nombre del mes en formato string
+// Retorno: número entero del mes
+// Complejidad: O(1)
 int mesAEntero(string mes) {
     if (mes == "Jan") return 1; if (mes == "Feb") return 2;
     if (mes == "Mar") return 3; if (mes == "Apr") return 4;
@@ -27,6 +29,10 @@ int mesAEntero(string mes) {
     return 0;
 }
 
+// Convierte una hora en formato HH:MM:SS a segundos totales
+// Parámetro: h - hora en formato string
+// Retorno: número de segundos desde las 00:00:00
+// Complejidad: O(1)
 int horaAEntero(string h) {
     int hh = stoi(h.substr(0,2));
     int mm = stoi(h.substr(3,2));
@@ -34,7 +40,10 @@ int horaAEntero(string h) {
     return hh*3600 + mm*60 + ss;
 }
 
-// Método para leer archivo
+// Lee el archivo de bitácora y almacena los datos en los arreglos globales
+// Parámetro: nombreArchivo - ruta del archivo de bitácora
+// Retorno: cantidad de registros leídos
+// Complejidad: O(n)
 int leerArchivo(string nombreArchivo) {
     ifstream archivo(nombreArchivo);
     if (!archivo.is_open()) {
@@ -62,6 +71,10 @@ int leerArchivo(string nombreArchivo) {
     return contador;
 }
 
+// Intercambia dos registros completos en los arreglos globales
+// Parámetros: i, j - índices de los registros a intercambiar
+// Retorno: ninguno
+// Complejidad: O(1)
 void swap(int i, int j) {
     int tempMes = mesInt[i]; mesInt[i] = mesInt[j]; mesInt[j] = tempMes;
     int tempDia = dias[i]; dias[i] = dias[j]; dias[j] = tempDia;
@@ -74,6 +87,10 @@ void swap(int i, int j) {
     string tempRazon = razones[i]; razones[i] = razones[j]; razones[j] = tempRazon;
 }
 
+// Ordena los registros de la bitácora usando Insertion Sort por mes, día y hora
+// Parámetro: n - número de registros
+// Retorno: ninguno
+// Complejidad: O(n^2)
 void insertionSort(int n) {
     for(int i = 1; i < n; i++){
         for(int j = i-1; j >= 0; j--){
@@ -88,12 +105,18 @@ void insertionSort(int n) {
     }
 }
 
-// Convierte fecha a clave única
+// Convierte fecha completa en clave única de segundos para comparaciones
+// Parámetros: mes, dia, horaSegundos
+// Retorno: clave numérica
+// Complejidad: O(1)
 int fechaAClave(int mes, int dia, int horaSegundos) {
     return ((mes * 31 + dia) * 86400) + horaSegundos;
 }
 
-// Búsqueda binaria para el primer registro >= fechaClave
+// Búsqueda binaria para encontrar el primer registro >= fechaClave
+// Parámetros: n - número de registros, fechaClave - clave de la fecha a buscar
+// Retorno: índice del primer registro que cumple la condición
+// Complejidad: O(log n)
 int busquedaBinariaInicio(int n, int fechaClave) {
     int izquierda = 0, derecha = n-1, res = n;
     while(izquierda <= derecha) {
@@ -109,7 +132,10 @@ int busquedaBinariaInicio(int n, int fechaClave) {
     return res;
 }
 
-// Búsqueda binaria para el último registro <= fechaClave
+// Búsqueda binaria para encontrar el último registro <= fechaClave
+// Parámetros: n - número de registros, fechaClave - clave de la fecha a buscar
+// Retorno: índice del último registro que cumple la condición
+// Complejidad: O(log n)
 int busquedaBinariaFin(int n, int fechaClave) {
     int izquierda = 0, derecha = n-1, res = -1;
     while(izquierda <= derecha) {
@@ -125,6 +151,7 @@ int busquedaBinariaFin(int n, int fechaClave) {
     return res;
 }
 
+// Función principal
 int main() {
     int n = leerArchivo("bitacora.txt");
     if(n == 0) return 0;
