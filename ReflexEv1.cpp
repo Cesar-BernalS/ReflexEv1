@@ -9,7 +9,7 @@ María Fernanda García Bushbeck
 
 using namespace std;
 
-const int MAX = 1000000;
+const int MAX = 20000;
 
 // Arreglos globales
 string meses[MAX], horas[MAX], ips[MAX], puertos[MAX], razones[MAX];
@@ -27,8 +27,7 @@ int mesAEntero(string mes) {
     return 0;
 }
 
- // Convertir horas a segundos y a enteros para más facilidad
-    int horaAEntero(string h) {
+int horaAEntero(string h) {
     int hh = stoi(h.substr(0,2));
     int mm = stoi(h.substr(3,2));
     int ss = stoi(h.substr(6,2));
@@ -45,8 +44,7 @@ int leerArchivo(string nombreArchivo) {
 
     int contador = 0;
     string linea;
-    while (contador < MAX && (archivo >> meses[contador] >> dias[contador] >> horas[contador] >> ips[contador])) {
-        // Separar puerto de IP
+    while (contador < MAX && archivo >> meses[contador] >> dias[contador] >> horas[contador] >> ips[contador]) {
         int pos = ips[contador].find(':');
         if (pos != string::npos) {
             puertos[contador] = ips[contador].substr(pos + 1);
@@ -55,77 +53,138 @@ int leerArchivo(string nombreArchivo) {
             puertos[contador] = "";
         }
 
-        // Leer el resto de la línea como razón
-        getline(archivo, razones[contador]);
-
-        // Llenar auxiliares
-        mesInt[contador]   = mesAEntero(meses[contador]);
-        horasInt[contador] = horaAEntero(horas[contador]);
-
+        archivo.ignore(); // Ignorar salto de línea residual
+        getline(archivo >> ws, razones[contador]);
         contador++;
     }
 
     archivo.close();
-    return contador; // cantidad de registros leídos
+    return contador;
 }
 
-// Comparar los datos por índice
-inline bool esMenorIdx(int i, int j){
-    if (mesInt[i] != mesInt[j]) return mesInt[i] < mesInt[j];
-    if (dias[i]   != dias[j])   return dias[i]   < dias[j];
-    return horasInt[i] < horasInt[j];
+void swap(int i, int j) {
+    int tempMes = mesInt[i]; mesInt[i] = mesInt[j]; mesInt[j] = tempMes;
+    int tempDia = dias[i]; dias[i] = dias[j]; dias[j] = tempDia;
+    int tempHora = horasInt[i]; horasInt[i] = horasInt[j]; horasInt[j] = tempHora;
+
+    string tempMesStr = meses[i]; meses[i] = meses[j]; meses[j] = tempMesStr;
+    string tempHoraStr = horas[i]; horas[i] = horas[j]; horas[j] = tempHoraStr;
+    string tempIp = ips[i]; ips[i] = ips[j]; ips[j] = tempIp;
+    string tempPuerto = puertos[i]; puertos[i] = puertos[j]; puertos[j] = tempPuerto;
+    string tempRazon = razones[i]; razones[i] = razones[j]; razones[j] = tempRazon;
 }
 
-void mergeIdx(int idx[], int temp[], int l, int m, int r){ 
-    int i = l, j = m + 1, k = l;
-    while (i <= m && j <= r) {
-        if (esMenorIdx(idx[i], idx[j])) {
-            temp[k++] = idx[i++];
-        } else {
-            temp[k++] = idx[j++];
+void insertionSort(int n) {
+    for(int i = 1; i < n; i++){
+        for(int j = i-1; j >= 0; j--){
+            if(mesInt[j+1] < mesInt[j] ||
+            (mesInt[j+1] == mesInt[j] && dias[j+1] < dias[j]) ||
+            (mesInt[j+1] == mesInt[j] && dias[j+1] == dias[j] && horasInt[j+1] < horasInt[j])) {
+                swap(j, j+1);
+            } else{
+                break;
+            }
         }
     }
-    while (i <= m) {
-        temp[k++] = idx[i++];
-    }
-    while (j <= r) {
-        temp[k++] = idx[j++];
-    }
-    for (int t = l; t <= r; ++t) {
-        idx[t] = temp[t];
-    }
 }
 
-// Merge sort recursivo
-void mergeSortIdxRec(int idx[], int temp[], int l, int r) {
-    if (l >= r) return;
-    int m = l + (r - l)/2;
-    mergeSortIdxRec(idx, temp, l, m);
-    mergeSortIdxRec(idx, temp, m+1, r);
-    mergeIdx(idx, temp, l, m, r);
+// Convierte fecha a clave única
+int fechaAClave(int mes, int dia, int horaSegundos) {
+    return ((mes * 31 + dia) * 86400) + horaSegundos;
 }
 
-void ordenar(int idx[], int n) {
-    static int temp[MAX];           
-    mergeSortIdxRec(idx, temp, 0, n-1);
+// Búsqueda binaria para el primer registro >= fechaClave
+int busquedaBinariaInicio(int n, int fechaClave) {
+    int izquierda = 0, derecha = n-1, res = n;
+    while(izquierda <= derecha) {
+        int medio = (izquierda + derecha)/2;
+        int claveMedio = fechaAClave(mesInt[medio], dias[medio], horasInt[medio]);
+        if(claveMedio >= fechaClave) {
+            res = medio;
+            derecha = medio - 1;
+        } else {
+            izquierda = medio + 1;
+        }
+    }
+    return res;
 }
 
-int main(){
+// Búsqueda binaria para el último registro <= fechaClave
+int busquedaBinariaFin(int n, int fechaClave) {
+    int izquierda = 0, derecha = n-1, res = -1;
+    while(izquierda <= derecha) {
+        int medio = (izquierda + derecha)/2;
+        int claveMedio = fechaAClave(mesInt[medio], dias[medio], horasInt[medio]);
+        if(claveMedio <= fechaClave) {
+            res = medio;
+            izquierda = medio + 1;
+        } else {
+            derecha = medio - 1;
+        }
+    }
+    return res;
+}
+
+int main() {
     int n = leerArchivo("bitacora.txt");
+    if(n == 0) return 0;
 
-    int idx[MAX];
-    for (int i = 0; i < n; ++i) idx[i] = i;
+    // Convertir meses y horas a enteros
+    for(int i = 0; i < n; i++){
+        mesInt[i] = mesAEntero(meses[i]);
+        horasInt[i] = horaAEntero(horas[i]);
+    }
 
-    ordenar(idx, n);
-    
-    // Impresión del ordenamiento
-    for (int k = 0; k < n; ++k) {
-    int i = idx[k]; 
-    cout << meses[i] << " " 
-        << dias[i] << " " 
-        << horas[i] << " "
-        << ips[i] << ":" << puertos[i] << " "
-        << razones[i] << "\n";
-}
+    // Ordenar bitácora
+    insertionSort(n);
+
+    // Pedir fechas al usuario
+    string mesInicio, mesFin;
+    int diaInicio, diaFin;
+
+    cout << "Ingrese la fecha de inicio (ejemplo: Aug 4):\n";
+    cin >> mesInicio >> diaInicio;
+
+    cout << "Ingrese la fecha de fin (ejemplo: Sep 21):\n";
+    cin >> mesFin >> diaFin;
+
+    int mesInicioInt = mesAEntero(mesInicio);
+    int mesFinInt = mesAEntero(mesFin);
+    if(mesInicioInt == 0 || mesFinInt == 0){
+        cout << "Error: mes inválido.\n";
+        return 0;
+    }
+
+    // Claves completas con hora fija
+    int fechaInicioClave = fechaAClave(mesInicioInt, diaInicio, 0);        // 00:00:00
+    int fechaFinClave    = fechaAClave(mesFinInt, diaFin, 86399);          // 23:59:59
+
+    if(fechaInicioClave > fechaFinClave){
+        cout << "Error: la fecha de inicio es mayor que la de fin.\n";
+        return 0;
+    }
+
+    // Búsqueda binaria
+    int inicioIdx = busquedaBinariaInicio(n, fechaInicioClave);
+    int finIdx    = busquedaBinariaFin(n, fechaFinClave);
+
+    // Validación de rango
+    if(inicioIdx == n || finIdx == -1 || inicioIdx > finIdx){
+        cout << "No hay registros en el rango ingresado.\n";
+        return 0;
+    }
+
+    // Guardar resultados en archivo
+    ofstream archivoSalida("resultado.txt");
+    cout << "\nRegistros en el rango:\n";
+    for(int i = inicioIdx; i <= finIdx; i++){
+        cout << meses[i] << " " << dias[i] << " " << horas[i] 
+            << " " << ips[i] << ":" << puertos[i] << " " << razones[i] << "\n";
+        archivoSalida << meses[i] << " " << dias[i] << " " << horas[i] 
+                    << " " << ips[i] << ":" << puertos[i] << " " << razones[i] << "\n";
+    }
+    archivoSalida.close();
+    cout << "\nResultados guardados en 'resultado.txt'\n";
+
     return 0;
 }
